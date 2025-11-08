@@ -77,7 +77,7 @@ Parameters:
 # VPC #
 #######
 Resources:
-  RaiseTech10VPC: #LogicalID
+  VPC: #LogicalID
     Type: AWS::EC2::VPC #リソース名
     Properties:
       CidrBlock: 10.0.0.0/16
@@ -92,7 +92,7 @@ Resources:
 # IGW/IGWAttach #
 #################
 
-  RaiseTech10IGW: #LogicalID
+  IGW: #LogicalID
     Type: AWS::EC2::InternetGateway #リソース名
     Properties:
       Tags: 
@@ -102,8 +102,8 @@ Resources:
   VPCGatewayAttach: #LogicalID
     Type: AWS::EC2::VPCGatewayAttachment #リソース名
     Properties:
-      InternetGatewayId: !Ref RaiseTech10IGW #!RefでIGWのIDを参照。
-      VpcId: !Ref RaiseTech10VPC #!RefでVPCのIDを参照。
+      InternetGatewayId: !Ref IGW #!RefでIGWのIDを参照。
+      VpcId: !Ref VPC #!RefでVPCのIDを参照。
 
 ##########
 # Subnet #
@@ -112,7 +112,7 @@ Resources:
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.0.0/24 #10.0.0.0 ~ 10.0.0.255
       #AvailabilityZone: ap-northeast-1a 
       AvailabilityZone: !Select [0, !GetAZs ""]
@@ -127,7 +127,7 @@ Resources:
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.1.0/24 #10.0.1.0 ~ 10.0.1.255
       #AvailabilityZone: ap-northeast-1c
       AvailabilityZone: !Select [1, !GetAZs ""]
@@ -144,7 +144,7 @@ Resources:
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.2.0/24 #10.0.2.0 ~ 10.0.2.255
       #AvailabilityZone: ap-northeast-1a 
       AvailabilityZone: !Select [0, !GetAZs ""]
@@ -158,7 +158,7 @@ Resources:
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.3.0/24 #10.0.3.0 ~ 10.0.3.255
       #AvailabilityZone: ap-northeast-1c
       AvailabilityZone: !Select [1, !GetAZs ""]
@@ -173,24 +173,24 @@ Resources:
 # RouteTable #
 ##############
 
-  RaiseTech10RouteTable:  #ルートテーブルの作成
+  RouteTable:  #ルートテーブルの作成
     Type: AWS::EC2::RouteTable
     Properties:
       Tags: 
         - Key: Name
           Value: !Sub "${AWS::StackName}-RouteTable"
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
 
   SubnetRouteTableAssociation1:  #サブネット1にルートテーブルを関連付け
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref RaiseTech10RouteTable
+      RouteTableId: !Ref RouteTable
       SubnetId: !Ref PublicSubnet1
  
   SubnetRouteTableAssociation2:  #サブネット2にルートテーブルを関連付け 
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref RaiseTech10RouteTable
+      RouteTableId: !Ref RouteTable
       SubnetId: !Ref PublicSubnet2
 
   Route10:
@@ -198,8 +198,8 @@ Resources:
     DependsOn: VPCGatewayAttach #IGWがVPCにアタッチされるまでスタック作成を待機させる。
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref RaiseTech10IGW
-      RouteTableId: !Ref RaiseTech10RouteTable
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RouteTable
 
 ###########
 # EC2-SG  #
@@ -209,7 +209,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: EC2-SecurityGroup
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
     
       SecurityGroupIngress: #インバウンド設定 ※アウトバウンド未記載時自動ですべてのトラフィックになる。（学習用なので記載）
         - IpProtocol: tcp
@@ -234,8 +234,10 @@ Resources:
 # EC2Instance #
 ###############
 
-  RaiseTech10EC2:
+  EC2:
     Type: AWS::EC2::Instance
+    DependsOn:
+    - InstanceProfile  # InstanceProfile の作成を待つ
     Properties:
       ImageId: !Ref MyAMI #パラメーターのMyAMIを参照
       KeyName: !Ref MyKeyName # パラメーターのMyKeyNameを参照
@@ -247,7 +249,7 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub "${AWS::StackName}-EC2"   
-      IamInstanceProfile: !Ref InstanceProfile10
+      IamInstanceProfile: !Ref InstanceProfile
 
 ##########
 # RDS SG #
@@ -256,7 +258,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: RDS-SG
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       SecurityGroupIngress: #インバウンド設定 ※アウトバウンド未記載時自動ですべてのトラフィックになる。（学習用なので記載）
         - IpProtocol: tcp
           FromPort: 3306 
@@ -277,7 +279,7 @@ Resources:
   RDSSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: PrivateSubnetGroup RaiseTech10 #説明　必須項目
+      DBSubnetGroupDescription: PrivateSubnetGroup  #説明　必須項目
       SubnetIds: 
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
@@ -309,7 +311,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: ALB-SG
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       SecurityGroupIngress: 
         - IpProtocol: tcp
           FromPort: 80 
@@ -329,7 +331,7 @@ Resources:
 ##########
 # ALB    #
 ##########
-  LoadBalancer10:
+  LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Type: application
@@ -348,15 +350,16 @@ Resources:
 ##########
 # ALB TG #
 ##########
-  LoadBalancer10TG:
+  ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: EC2
     Properties:
-      VpcId: !Ref RaiseTech10VPC
+      VpcId: !Ref VPC
       Protocol: HTTP
       Port: 80
       TargetType: instance
-      Targets: #ここに書かない場合TGAttachmentでEC2を指定する。
-        - Id: !GetAtt RaiseTech10EC2.InstanceId #インスタンスIDを取得
+      Targets: 
+        - Id: !GetAtt EC2.InstanceId #インスタンスIDを取得
       Tags: 
         - Key: Name
           Value: !Sub "${AWS::StackName}-ALBTG"
@@ -375,17 +378,17 @@ Resources:
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      LoadBalancerArn: !Ref LoadBalancer10
+      LoadBalancerArn: !Ref LoadBalancer
       Protocol: HTTP
       Port: 80
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref LoadBalancer10TG
+          TargetGroupArn: !Ref ALBTargetGroup
 
 ######
 # S3 #
 ###### 
-  RaiseTech10Bucket: #LogicalID
+  Bucket: #LogicalID
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref MyBucketName #テンプレートを実行するときにユーザーが入力したバケット名が、そのまま S3 バケットの名前として使われる。
@@ -398,7 +401,7 @@ Resources:
 ########
 # Role #
 ######## 
-  Role10:
+  Role:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument: #Roleの信頼信頼ポリシーの定義
@@ -411,10 +414,10 @@ Resources:
             Action: 
               - sts:AssumeRole #EC2に対して鍵を渡せるようになる。
       ManagedPolicyArns: 
-        - !Ref Policy10 
+        - !Ref Policy
             # 既存のManagedPolicyがある場合、「ManagedPolicyarns」で参照可能。
             # 同テンプレートの場合 ManagedPolicyArns: !Ref managedのlogicalIDも可。
-  Policy10:
+  Policy:
     Type: AWS::IAM::ManagedPolicy # マネージドポリシー（ポリシーを独立して定義している 複数Roleにアタッチ可能)
     Properties:
       PolicyDocument:
@@ -425,14 +428,13 @@ Resources:
               - 's3:GetObject'
               - 's3:PutObject'
             Resource: !Sub "arn:aws:s3:::${MyBucketName}/*"
-     # Roles:
-      #  - !Ref Role10 # 新しく作ったManagedPolicyをRoleにアタッチ。
+    
 
-  InstanceProfile10:
+  InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
-      - !Ref Role10       
+      - !Ref Role      
 
 
 ##############      
@@ -442,7 +444,7 @@ Resources:
 Outputs:
   EC2PublicIP:
     Description: "作成したEC2のパブリックIPアドレスの表示"
-    Value: !GetAtt RaiseTech10EC2.PublicIp #EC2のパブリックIPアドレスを取得
+    Value: !GetAtt EC2.PublicIp #EC2のパブリックIPアドレスを取得
     Export:
       Name: !Sub "${AWS::StackName}-EC2-PublicIP"  #左の名前を使用して[!ImportValue]で別スタックで参照できる。
 
