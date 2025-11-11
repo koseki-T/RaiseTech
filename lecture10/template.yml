@@ -1,0 +1,450 @@
+
+AWSTemplateFormatVersion: "2010-09-09" # 固定値
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups: #スタック作成時パラメーターのグループ分けをする
+      - Label: 
+          Default: "EC2"
+        Parameters:
+          - MyAMI
+          - MyKeyName
+          - MyInstanceType
+
+      - Label: 
+          Default: "RDS"
+        Parameters:
+          - MyDBPassword
+          - MyMasterUsername
+
+      - Label:
+          Default: "S3"
+        Parameters:
+          - MyBucketName
+
+
+#############
+# パラメータ #
+#############
+Parameters:    
+  MyAMI:
+    Description: "AMIID"
+    Type: AWS::EC2::Image::Id
+    Default: ami-0190c0073f61fb37a #デフォで入力される。
+
+  MyKeyName:
+    Description: "SSHConnectKey"
+    Type: AWS::EC2::KeyPair::KeyName
+
+  MyInstanceType:
+    Description: "InstanceType"
+    Type: String
+    Default: t2.micro
+    AllowedValues: #選択肢を追加できる。
+      - t2.micro
+      - t3.micro
+      
+  MyDBPassword:
+    Description: "RDSPassword"
+    Type: String
+    NoEcho: true #パスワードを隠したいときに使用　※実務ではsecret managerを使用
+    AllowedPattern: ^[a-zA-Z0-9]*$
+    MinLength: 8
+    MaxLength: 20
+    ConstraintDescription: "英数字8~20で記載"
+
+  MyMasterUsername:
+    Description: "DBMasterName"
+    Type: String
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    MinLength: 4
+    MaxLength: 16
+    ConstraintDescription: "英数字4~16で記載"
+
+  MyBucketName: #LogicalID / parametersでBucketNameを定義（スタック作成時値を入力できるようになる）
+    Description: The name of the S3 bucket
+    Type: String 
+    MinLength: 5
+    MaxLength: 63
+    AllowedPattern: '^[a-z0-9.-]+$'  
+
+
+
+#------------------------------------------------------------------
+
+
+#######
+# VPC #
+#######
+Resources:
+  VPC: #LogicalID
+    Type: AWS::EC2::VPC #リソース名
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true #DNSホスト名をインスタンスに自動でアタッチするかの設定。
+      EnableDnsSupport: true #VPC内でDNS（名前）解決を出来るようにする設定。falseの場合は インスタンスはDNS使用不可能になる。
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-VPC" #(Stack名)-VPCが返る。
+
+#################
+# IGW/IGWAttach #
+#################
+
+  IGW: #LogicalID
+    Type: AWS::EC2::InternetGateway #リソース名
+    Properties:
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-IGW"
+
+  VPCGatewayAttach: #LogicalID
+    Type: AWS::EC2::VPCGatewayAttachment #リソース名
+    Properties:
+      InternetGatewayId: !Ref IGW #!RefでIGWのIDを参照。
+      VpcId: !Ref VPC #!RefでVPCのIDを参照。
+
+##########
+# Subnet #
+##########
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/24 #10.0.0.0 ~ 10.0.0.255
+      #AvailabilityZone: ap-northeast-1a 
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true #インスタンス作成時に自動でパブリックIPが付くので手間が省ける
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public1"
+         
+        - Key: Type 
+          Value: Public1 
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24 #10.0.1.0 ~ 10.0.1.255
+      #AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true #このサブネットで起動されたインスタンスがパブリックIPアドレスを受け取るかどうか。プライベートサブネットの時は不要。
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public2"
+           
+        - Key: Type 
+          Value: Public2 
+
+#############
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24 #10.0.2.0 ~ 10.0.2.255
+      #AvailabilityZone: ap-northeast-1a 
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private1"
+          
+        - Key: Type 
+          Value: Private1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24 #10.0.3.0 ~ 10.0.3.255
+      #AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private2"
+
+        - Key: Type 
+          Value: Private2
+
+##############
+# RouteTable #
+##############
+
+  RouteTable:  #ルートテーブルの作成
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-RouteTable"
+      VpcId: !Ref VPC
+
+  SubnetRouteTableAssociation1:  #サブネット1にルートテーブルを関連付け
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref PublicSubnet1
+ 
+  SubnetRouteTableAssociation2:  #サブネット2にルートテーブルを関連付け 
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  Route10:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttach #IGWがVPCにアタッチされるまでスタック作成を待機させる。
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RouteTable
+
+###########
+# EC2-SG  #
+###########
+
+  EC2SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2-SecurityGroup
+      VpcId: !Ref VPC
+    
+      SecurityGroupIngress: #インバウンド設定 ※アウトバウンド未記載時自動ですべてのトラフィックになる。（学習用なので記載）
+        - IpProtocol: tcp
+          FromPort: 80 # 80~80の指定
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSG
+
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 1.73.154.57/32
+
+      SecurityGroupEgress:
+        - IpProtocol: -1 #-1 →　すべてのトラフィック（指定したい場合はインバウンド同様に記載）
+          CidrIp: 0.0.0.0/0
+
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-SG"
+
+###############
+# EC2Instance #
+###############
+
+  EC2:
+    Type: AWS::EC2::Instance
+    DependsOn:
+    - InstanceProfile  # InstanceProfile の作成を待つ
+    Properties:
+      ImageId: !Ref MyAMI #パラメーターのMyAMIを参照
+      KeyName: !Ref MyKeyName # パラメーターのMyKeyNameを参照
+      InstanceType: !Ref MyInstanceType #パラメーターのMyInstanceTypeを参照
+      SubnetId: !Ref PublicSubnet1 #VPCに複数サブネットがある場合指定しておくと安心
+      SecurityGroupIds:
+        - !Ref EC2SG
+
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2"   
+      IamInstanceProfile: !Ref InstanceProfile
+
+##########
+# RDS SG #
+##########
+  RDSSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS-SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress: #インバウンド設定 ※アウトバウンド未記載時自動ですべてのトラフィックになる。（学習用なので記載）
+        - IpProtocol: tcp
+          FromPort: 3306 
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref EC2SG
+        
+      SecurityGroupEgress: 
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-RDS-SG"
+
+###############
+# SubnetGroup #
+###############
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: PrivateSubnetGroup  #説明　必須項目
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-RDS-SubnetGroup"  
+    
+###################
+# RDS DB Instance #
+###################
+  RDSDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t4g.micro #クラス
+      Engine: mysql
+      MasterUsername: !Ref MyMasterUsername
+      MasterUserPassword: !Ref MyDBPassword
+      AllocatedStorage: 20 #ストレージ
+      VPCSecurityGroups: #DBSecurityGroupsはレガシーなので使用しない
+        - !Ref RDSSG
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      PubliclyAccessible: false #確実に内部用のDBになる
+
+
+##########
+# ALB SG #
+##########
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB-SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80 
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          
+      SecurityGroupEgress: 
+        - IpProtocol: tcp
+          FromPort: 80 
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ALB-SG"
+
+##########
+# ALB    #
+##########
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing #未記載時自動でインターネット公開設定になる、内部利用ならinternalを記載 ※ 今回書かなくてもいい。
+      IpAddressType: ipv4 #未記載時自動でipv4設定になる
+      Subnets: 
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups: 
+        - !Ref ALBSG
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ALB"
+
+
+##########
+# ALB TG #
+##########
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: EC2
+    Properties:
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      Targets: 
+        - Id: !GetAtt EC2.InstanceId #インスタンスIDを取得
+      Tags: 
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ALBTG"
+      HealthCheckEnabled: true #ヘルスチェックON　未記載でも可
+      HealthCheckIntervalSeconds: 20 #ヘルスチェックの間隔
+      HealthCheckPath: "/"
+      HealthCheckProtocol: HTTP 
+      HealthCheckPort: 80
+      HealthCheckTimeoutSeconds: 5 #タイムアウト時間
+      HealthyThresholdCount: 3 #正常と判断されるまでの回数
+      UnhealthyThresholdCount: 2 #異常と判断されるまでの回数
+
+###############
+# ALB リスナー #
+############### 
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+######
+# S3 #
+###### 
+  Bucket: #LogicalID
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref MyBucketName #テンプレートを実行するときにユーザーが入力したバケット名が、そのまま S3 バケットの名前として使われる。
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true #新しくpublivAclをつけようとしたらエラーを出して止める役割。
+        IgnorePublicAcls: true #すでについているpublivAclを無効化。/※二点はファイル単位での非公開公開設定は全てブロックされる。現代はバケットポリシーで管理するのが主流のため
+        BlockPublicPolicy: false #True→新しくバケット自体を公開する設定を付与するのを禁止する。
+        RestrictPublicBuckets: false #True→公開バケットでも外部からのアクセスを制限（アカウント内の許可したユーザーのみ）
+
+########
+# Role #
+######## 
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: #Roleの信頼信頼ポリシーの定義
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: 
+              Service:
+                - ec2.amazonaws.com 
+            Action: 
+              - sts:AssumeRole #EC2に対して鍵を渡せるようになる。
+      ManagedPolicyArns: 
+        - !Ref Policy
+            # 既存のManagedPolicyがある場合、「ManagedPolicyarns」で参照可能。
+            # 同テンプレートの場合 ManagedPolicyArns: !Ref managedのlogicalIDも可。
+  Policy:
+    Type: AWS::IAM::ManagedPolicy # マネージドポリシー（ポリシーを独立して定義している 複数Roleにアタッチ可能)
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource: !Sub "arn:aws:s3:::${MyBucketName}/*"
+    
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+      - !Ref Role      
+
+
+##############      
+# アウトプット #  スタック作成後出力欄に表示される/他テンプレートで参照が可能になる。
+##############
+
+Outputs:
+  EC2PublicIP:
+    Description: "作成したEC2のパブリックIPアドレスの表示"
+    Value: !GetAtt EC2.PublicIp #EC2のパブリックIPアドレスを取得
+    Export:
+      Name: !Sub "${AWS::StackName}-EC2-PublicIP"  #左の名前を使用して[!ImportValue]で別スタックで参照できる。
+
