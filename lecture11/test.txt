@@ -1,0 +1,29 @@
+File "/home/ec2-user/raisetech-live8-sample-app/tmp/sockets/puma.sock"
+  is expected to be socket
+
+Package "nginx"
+  is expected to be installed
+
+Service "nginx"
+  is expected to be running
+
+Service "puma.service"
+  is expected to be running
+
+Port "80"
+  is expected to be listening
+
+Command "curl http://127.0.0.1:#{listen_port}/_plugin/head/ -o /dev/null -w "%{http_code}\n" -s"
+  stdout
+    is expected to match /^200$/
+
+Command "ruby -v"
+  stdout
+    is expected to match /3\.2\.3/
+  exit_status
+    is expected to eq 0
+
+Finished in 7.73 seconds (files took 0.21653 seconds to load)
+8 examples, 0 failures
+
+
