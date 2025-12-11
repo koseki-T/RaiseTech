@@ -20,8 +20,6 @@ serverspec/
           │       └── sample_spec.rb
           │ 
           └── spec_helper.rb
-
-
 ```
 
 ### spec_helper.rb
@@ -36,7 +34,7 @@ serverspec/
 
 ### .ssh/config
 
-![test](image11/ssh:config.png)
+![.ssh](image11/ssh:config.png)
 
 
 ### テスト実行
@@ -47,7 +45,7 @@ TARGET_HOST=raisetech11 bundle exec rake spec
 
 ※ TARGET_HOST=(.ssh/config内に書いたhost名)を起動コマンドに含めると環境変数として代入され、.ssh/configに記載されたSSH設定のホスト名を探し、一致した場合SSH接続が実行される。
 
-![rakespec](image11/sshrakespec..png)
+![rakespec](image11/rakespec.png)
 [テスト実行結果](test.txt)
 
 ※ MACからSSHで実行したい場合は、
