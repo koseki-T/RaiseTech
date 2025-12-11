@@ -13,7 +13,8 @@ Service "puma.service"
 Port "80"
   is expected to be listening
 
-Command "curl http://127.0.0.1:#{listen_port}/_plugin/head/ -o /dev/null -w "%{http_code}\n" -s"
+Command "curl http://127.0.0.1:80/ -o /dev/null -w "%{http_code}
+" -s"
   stdout
     is expected to match /^200$/
 
@@ -23,7 +24,7 @@ Command "ruby -v"
   exit_status
     is expected to eq 0
 
-Finished in 7.73 seconds (files took 0.21653 seconds to load)
+Finished in 7.61 seconds (files took 0.21638 seconds to load)
 8 examples, 0 failures
 
 
