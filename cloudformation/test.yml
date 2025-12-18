@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: "2010-09-09" # 固定値
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups: #スタック作成時パラメーターのグループ分けをする
+      - Label: 
+          Default: "EC2"
+        Parameters:
+          - MyAMI
+          - MyKeyName
+          - MyInstanceType
+
+      - Label: 
+          Default: "RDS"
+        Parameters:
+          - MyDBPassword
+          - MyMasterUsername
+
+      - Label:
+          Default: "S3"
+        Parameters:
+          - MyBucketName
+
