@@ -4,20 +4,20 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups: #スタック作成時パラメーターのグループ分けをする
       - Label: 
-          Default: "EC2"
+          default: "EC2"
         Parameters:
           - MyAMI
           - MyKeyName
           - MyInstanceType
 
       - Label: 
-          Default: "RDS"
+          default: "RDS"
         Parameters:
           - MyDBPassword
           - MyMasterUsername
 
       - Label:
-          Default: "S3"
+          default: "S3"
         Parameters:
           - MyBucketName
 
@@ -235,8 +235,8 @@ Resources:
 
   EC2:
     Type: AWS::EC2::Instance
-    DependsOn:
-    - InstanceProfile  # InstanceProfile の作成を待つ
+   # DependsOn:
+   # - InstanceProfile  # InstanceProfile の作成を待つ
     Properties:
       ImageId: !Ref MyAMI #パラメーターのMyAMIを参照
       KeyName: !Ref MyKeyName # パラメーターのMyKeyNameを参照
@@ -351,7 +351,7 @@ Resources:
 ##########
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    DependsOn: EC2
+    #DependsOn: EC2
     Properties:
       VpcId: !Ref VPC
       Protocol: HTTP
