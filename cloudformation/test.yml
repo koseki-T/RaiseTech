@@ -43,22 +43,22 @@ Parameters:
       - t2.micro
       - t3.micro
       
-  MyDBPassword:
-    Description: "RDSPassword"
-    Type: String
-    NoEcho: true #パスワードを隠したいときに使用　※実務ではsecret managerを使用
-    AllowedPattern: ^[a-zA-Z0-9]*$
-    MinLength: 8
-    MaxLength: 20
-    ConstraintDescription: "英数字8~20で記載"
+#  MyDBPassword:
+ #   Description: "RDSPassword"
+  #  Type: String
+   # NoEcho: true #パスワードを隠したいときに使用　※実務ではsecret managerを使用
+   # AllowedPattern: ^[a-zA-Z0-9]*$
+   # MinLength: 8
+   # MaxLength: 20
+   # ConstraintDescription: "英数字8~20で記載"
 
-  MyMasterUsername:
-    Description: "DBMasterName"
-    Type: String
-    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
-    MinLength: 4
-    MaxLength: 16
-    ConstraintDescription: "英数字4~16で記載"
+ # MyMasterUsername:
+  #  Description: "DBMasterName"
+  #  Type: String
+  #  AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+  #  MinLength: 4
+  #  MaxLength: 16
+  #  ConstraintDescription: "英数字4~16で記載"
 
   MyBucketName: #LogicalID / parametersでBucketNameを定義（スタック作成時値を入力できるようになる）
     Description: The name of the S3 bucket
@@ -294,8 +294,13 @@ Resources:
     Properties:
       DBInstanceClass: db.t4g.micro #クラス
       Engine: mysql
-      MasterUsername: !Ref MyMasterUsername
-      MasterUserPassword: !Ref MyDBPassword
+    # MasterUsername: !Ref MyMasterUsername
+    # MasterUserPassword: !Ref MyDBPassword
+     
+      MasterUsername: "{{resolve:secretsmanager:raisetech12/seclets:SecretString:username}}"
+      MasterUserPassword: "{{resolve:secretsmanager:raisetech12/seclets:SecretString:password}}"
+
+
       AllocatedStorage: 20 #ストレージ
       VPCSecurityGroups: #DBSecurityGroupsはレガシーなので使用しない
         - !Ref RDSSG
