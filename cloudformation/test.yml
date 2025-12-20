@@ -10,11 +10,11 @@ Metadata:
           - MyKeyName
           - MyInstanceType
 
-      - Label: 
-          default: "RDS"
-        Parameters:
-          - MyDBPassword
-          - MyMasterUsername
+#     - Label: 
+#         default: "RDS"
+#       Parameters:
+#         - MyDBPassword
+#         - MyMasterUsername
 
       - Label:
           default: "S3"
