@@ -1,0 +1,18 @@
+version: 2.1 #バージョン2.1使用
+orbs: #パッケージ（orbs）の中からPython2.0.3を使用
+  python: circleci/python@2.0.3
+jobs: #jobの定義 
+  cfn-lint: #jobの名前を設定
+    executor: python/default #jobのstepが実行される実行環境を定義（Pythonのデフォルト環境指定）
+    steps:
+      - checkout #GitHubから情報取得
+      - run: pip install cfn-lint #pip(Python用ツール)でcfn-lintをinstall
+      - run:
+          name: run cfn-lint #実行名を定義（無いと下のコマンドが名前になってみにくくなる）
+          command: | #cloudformationフォルダ内の.ymlをテストさせるコマンド
+            cfn-lint -i W3002 -t cloudformation/*.yml
+
+workflows: #jobとその実行順序を定義する場所
+  raisetech: #ワークフロウの名前を設定
+    jobs:
+      - cfn-lint
