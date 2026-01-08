@@ -1,0 +1,55 @@
+
+---
+
+- name: Nginxインストール/起動
+  hosts: raisetech_host
+  become: yes  # 管理者権限で実行
+
+  vars: # 変数　＊ここで中身を変更することにより修正が楽になる。
+    app_path: /home/ec2-user/raisetech-live8-sample-app
+
+  tasks: # やることリスト
+    - name: (Nginxをインストール)
+      ansible.builtin.yum:
+        name: nginx
+        state: present  # nginx無い場合install/nginx有場合スルー
+
+    - name: 起動
+      ansible.builtin.service:
+        name: nginx
+        state: started # 起動させる
+        enabled: yes   # 自動起動を有効化
+
+    - name: index.htmlコピー
+      ansible.builtin.copy:
+        src: files/index.html # ローカルhtmlのパス（相対パスでOK）(上書きファイル)
+        dest: /usr/share/nginx/html/index.html # ターゲット側のhtmlのパス(上書きされる先)
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: nginx.conf コピー 
+      ansible.builtin.copy: 
+        src: files/nginx.conf # コピー元
+        dest: /etc/nginx/nginx.conf # コピー先
+        owner: root 
+        group: root 
+        mode: '0644' 
+
+    - name: jinja2 nginx.conf  # 変数用template
+      template: 
+        src: template/nginx.conf.j2 
+        dest: /etc/nginx/conf.d/app.conf 
+      notify: restart nginx # handlerの呼び出し
+
+  handlers: # j2変更時、再起動させる
+    - name: restart nginx 
+      ansible.builtin.service:  
+        name: nginx 
+        state: restarted
+
+
+
+
+
+
