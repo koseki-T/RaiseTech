@@ -31,7 +31,7 @@ jobs: #jobの定義（初めの一回のみ）
           command: |
             ansible-playbook -i inventory.ini \
             -e "ansible_server_host=$RaiseTech13IP" \
-            -e "key_name=~/.ssh/id_rsa_BbF/e4qEHi98IYbVJ7I55VRHsvmm0uEFxdHjsie0Y4g" \
+            -e "key_name=~/.ssh/id_rsa_BbFe4qEHi98IYbVJ7I55VRHsvmm0uEFxdHjsie0Y4g" \
             playbook.yml
             
 
