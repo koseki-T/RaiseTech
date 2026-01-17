@@ -19,7 +19,7 @@ jobs: #jobの定義（初めの一回のみ）
     steps: #作業手順
       - checkout #GitHubから情報取得
       - add_ssh_keys:
-          fingerprints:
+          fingerprints: #circleCIで登録済み
             - "SHA256:BbF/e4qEHi98IYbVJ7I55VRHsvmm0uEFxdHjsie0Y4g"
     
       - run: #pipでansibleinstall
@@ -29,10 +29,10 @@ jobs: #jobの定義（初めの一回のみ）
       - run: #実行コマンド
           name: ansible command start
           command: |
-            ansible-playbook -i inventory.ini \
+            ansible-playbook -i ansible/inventory.ini \
             -e "ansible_server_host=$RaiseTech13IP" \
             -e "key_name=~/.ssh/id_rsa_BbFe4qEHi98IYbVJ7I55VRHsvmm0uEFxdHjsie0Y4g" \
-            playbook.yml
+            ansible/playbook.yml
             
 
 workflows: #jobとその実行順序を定義する場所
