@@ -29,6 +29,8 @@ jobs: #jobの定義（初めの一回のみ）
       - run: #実行コマンド
           name: ansible command start
           command: |
+            ls -la ~/.ssh/
+
             ssh-keyscan $RaiseTech13IP >> ~/.ssh/known_hosts
 
             ansible-playbook -i ansible/inventory.ini \
