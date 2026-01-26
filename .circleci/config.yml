@@ -39,7 +39,9 @@ jobs: #jobの定義（初めの一回のみ）
 
 #＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
   serverspec-start:
-    executor: ruby/default #実行環境を定義
+    docker:
+      - image: cimg/ruby:3.2.3 #ruby3.2.3が入ったdockerをを使用
+    #executor: ruby/default 
     steps: #作業手順
       - checkout #GitHubから情報取得
       - add_ssh_keys:
