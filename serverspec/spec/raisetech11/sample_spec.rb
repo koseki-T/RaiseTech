@@ -46,13 +46,10 @@ end
 # 200を返すか#
 #============#
 
-describe command("curl http://127.0.0.1:#{listen_port}/ -o /dev/null -w "%{http_code}\n" -s") do
+describe command("curl http://127.0.0.1:#{listen_port}/ -o /dev/null -w \"%{http_code}\n\" -s") do
   its(:stdout) { should match /^200$/ }
 end
 
-#describe command("curl http://127.0.0.1:#{listen_port}/ -o /dev/null -w \"%{http_code}\n\" -s") do
-#  its(:stdout) { should match /^200$/ }
-#end
 
 #===============================#
 # rubyは確認できるか（絶対パス）# 
