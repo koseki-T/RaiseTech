@@ -19,7 +19,7 @@ set :backend, :ssh
 host = '57.181.37.187'
 
 # options = Net::SSH::Config.for(host)
-
+options = {}
 options[:user] ||= 'ec2-user'
 
 set :host,        options[:host_name] || host
