@@ -62,9 +62,13 @@ jobs: #jobの定義（初めの一回のみ）
       - run: #実行コマンド
           name: serverspec command start
           command: |
-            ssh-keyscan ${RaiseTech13IP} >> ~/.ssh/known_hosts
+           # ssh-keyscan ${RaiseTech13IP} >> ~/.ssh/known_hosts
+            ssh-keyscan 57.181.37.187 >> ~/.ssh/known_hosts
+
             cd serverspec
-            TARGET_HOST=${RaiseTech13IP} bundle exec rake spec
+
+           # TARGET_HOST=${RaiseTech13IP} bundle exec rake spec
+            TARGET_HOST=57.181.37.187 bundle exec rake spec
 
  #=================================================           
 
