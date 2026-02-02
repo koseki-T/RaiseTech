@@ -66,7 +66,9 @@ jobs: #jobの定義（初めの一回のみ）
 
             cd serverspec
 
-            TARGET_HOST=$RaiseTech13IP bundle exec rake spec
+            TARGET_HOST=54.238.222.164 bundle exec rake spec
+
+           # TARGET_HOST=$RaiseTech13IP bundle exec rake spec
             
 
  #=================================================           
