@@ -14,9 +14,7 @@ set :backend, :ssh
  # set :sudo_password, ENV['SUDO_PASSWORD']
 #end
 
-# host = ENV['TARGET_HOST']
-
-host = '57.181.37.187'
+host = ENV['TARGET_HOST']
 
 # options = Net::SSH::Config.for(host)
 options = {}

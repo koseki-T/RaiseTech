@@ -1,0 +1,9 @@
+---
+# handlers file for roles/nginx
+
+
+- name: restart nginx # j2変更時、再起動させる
+  ansible.builtin.service:  
+    name: nginx 
+    state: restarted
+  
