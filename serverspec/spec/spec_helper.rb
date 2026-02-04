@@ -20,7 +20,9 @@ host = ENV['TARGET_HOST']
 options = {}
 options[:user] ||= 'ec2-user'
 
-set :host,        options[:host_name] || host
+set :host,        options[:host_name] || host 
+#上記、SSH config から取れた host_name があればそれを使い、
+#なければ環境変数 TARGET_HOST の値を接続先として使う
 set :ssh_options, options
 
 # Disable sudo
