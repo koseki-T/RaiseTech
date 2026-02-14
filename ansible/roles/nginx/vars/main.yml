@@ -1,0 +1,4 @@
+---
+# vars file for roles/nginx
+
+app_path: "/home/ec2-user/raisetech-live8-sample-app"

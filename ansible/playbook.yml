@@ -1,0 +1,9 @@
+
+---
+
+- name: Nginxインストール/起動
+  hosts: raisetech_host
+  become: yes  # 管理者権限で実行
+
+  roles:
+    - nginx

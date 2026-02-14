@@ -1,0 +1,37 @@
+---
+# tasks file for roles/nginx
+
+- name: (Nginxをインストール)
+  ansible.builtin.yum:
+    name: nginx
+    state: present  # nginx無い場合install/nginx有場合スルー
+
+- name: Nginx起動
+  ansible.builtin.service:
+    name: nginx
+    state: started # 起動させる
+    enabled: yes   # 自動起動を有効化
+
+- name: index.htmlコピー 
+  ansible.builtin.copy:
+    src: index.html # ローカルhtmlのパス（相対パスでOK）(上書きファイル)
+    dest: /usr/share/nginx/html/index.html # ターゲット側のhtmlのパス(上書きされる先)
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: nginx.conf コピー 
+  ansible.builtin.copy: 
+    src: nginx.conf # コピー元
+    dest: /etc/nginx/nginx.conf # コピー先
+    owner: root 
+    group: root 
+    mode: '0644' 
+  notify: restart nginx # handlerの呼び出し
+
+- name: jinja2 nginx.conf  # 変数用template
+  template: 
+    src: nginx.conf.j2 
+    dest: /etc/nginx/conf.d/app.conf 
+  notify: restart nginx # handlerの呼び出し
+
